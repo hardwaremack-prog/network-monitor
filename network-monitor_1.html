@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Network Monitor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0A0D11;
+    --panel: #10151B;
+    --panel-2: #141B23;
+    --line: #1E2831;
+    --line-soft: #171F27;
+    --text: #E7ECF0;
+    --text-dim: #7C8896;
+    --text-faint: #4B5560;
+    --down: #4FA8FF;
+    --down-dim: #1E3A54;
+    --up: #FFB454;
+    --up-dim: #4A3820;
+    --ok: #38D39F;
+    --ok-dim: #123A2E;
+    --warn: #FF6B6B;
+    --warn-dim: #3A1818;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-sans: 'Space Grotesk', sans-serif;
+  }
+  *{ box-sizing: border-box; margin:0; padding:0; }
+  html,body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    min-height: 100vh;
+  }
+  body{ padding: 28px 32px 48px; }
+
+  .top{
+    display:flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+    gap: 16px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 20px;
+  }
+  .brand{ display:flex; align-items:center; gap: 12px; }
+  .brand .dot{
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 0 3px var(--ok-dim);
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ opacity: 1; }
+    50%{ opacity: .45; }
+  }
+  .brand h1{
+    font-size: 20px; font-weight: 600; letter-spacing: 0.3px;
+  }
+  .brand .eyebrow{
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 1.5px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    display:block;
+    margin-bottom: 2px;
+  }
+  .clock{
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-dim);
+    text-align: right;
+  }
+  .clock .date{ color: var(--text-faint); font-size: 11px; margin-top: 2px;}
+
+  .summary{
+    display:grid;
+    grid-template-columns: 1.1fr 1fr 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 22px;
+  }
+  .summary .cell{
+    background: var(--panel);
+    padding: 16px 18px;
+    position: relative;
+  }
+  .summary .cell .label{
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+  }
+  .summary .cell .value{
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+  }
+  .summary .cell .value .unit{
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 400;
+    margin-left: 4px;
+  }
+  .summary .cell.down .value{ color: var(--down); }
+  .summary .cell.up .value{ color: var(--up); }
+  .summary .cell .sub{
+    font-size: 11px; color: var(--text-faint); margin-top: 4px;
+    font-family: var(--font-mono);
+  }
+  .ring-cell{ display:flex; align-items:center; gap: 14px; }
+  .ring-cell svg{ flex-shrink: 0; }
+  .ring-cell .ring-text .value{ font-size: 19px; }
+  .ring-cell .ring-text .label{ margin-bottom: 4px; }
+
+  .grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 14px;
+  }
+
+  .card{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 20px 16px;
+  }
+  .card-head{
+    display:flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+  .adapter-name{ display:flex; align-items:center; gap: 9px; }
+  .adapter-name .icon{
+    width: 30px; height:30px; border-radius: 7px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 14px;
+  }
+  .adapter-name .txt h3{ font-size: 14.5px; font-weight: 600; }
+  .adapter-name .txt .type{
+    font-family: var(--font-mono);
+    font-size: 10px; color: var(--text-faint);
+    letter-spacing: .5px; text-transform: uppercase;
+    margin-top: 1px;
+  }
+  .status-pill{
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 20px;
+    display:flex; align-items:center; gap:5px;
+    white-space: nowrap;
+  }
+  .status-pill.up{ background: var(--ok-dim); color: var(--ok); }
+  .status-pill.down{ background: var(--warn-dim); color: var(--warn); }
+  .status-pill .sdot{ width:5px; height:5px; border-radius:50%; background: currentColor; }
+
+  .speeds{
+    display:flex;
+    gap: 22px;
+    margin-bottom: 12px;
+  }
+  .speed-block .lbl{
+    font-family: var(--font-mono);
+    font-size: 10px; letter-spacing: .5px; text-transform: uppercase;
+    color: var(--text-faint);
+    display:flex; align-items:center; gap: 5px;
+    margin-bottom: 4px;
+  }
+  .speed-block .lbl .arrow{ font-size: 11px; }
+  .speed-block.down .lbl{ color: var(--down); }
+  .speed-block.up .lbl{ color: var(--up); }
+  .speed-block .num{
+    font-family: var(--font-mono);
+    font-size: 21px; font-weight: 600;
+    letter-spacing: -0.5px;
+  }
+  .speed-block .num .u{ font-size: 11px; color: var(--text-dim); font-weight: 400; margin-left: 3px;}
+
+  .spark-wrap{
+    position: relative;
+    height: 54px;
+    margin: 4px 0 14px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--panel-2);
+  }
+  .spark-wrap canvas{ width: 100%; height: 100%; display:block; }
+
+  .meta-row{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .meta-item .k{
+    font-family: var(--font-mono);
+    font-size: 9.5px; letter-spacing: .5px; text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 3px;
+  }
+  .meta-item .v{
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .meta-item .v.strong{ color: var(--text); }
+
+  footer{
+    margin-top: 26px;
+    display:flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-faint);
+    letter-spacing: .3px;
+  }
+  footer span b{ color: var(--text-dim); font-weight: 500; }
+
+  @media (max-width: 640px){
+    body{ padding: 20px 16px 36px; }
+    .summary{ grid-template-columns: 1fr 1fr; }
+    .speeds{ gap: 14px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="top">
+    <div class="brand">
+      <div class="dot"></div>
+      <div>
+        <span class="eyebrow">Live adapter telemetry</span>
+        <h1>Network Monitor</h1>
+      </div>
+    </div>
+    <div class="clock">
+      <div id="time">00:00:00</div>
+      <div class="date" id="date">—</div>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="cell ring-cell">
+      <svg width="58" height="58" viewBox="0 0 58 58">
+        <circle cx="29" cy="29" r="24" fill="none" stroke="var(--line)" stroke-width="5"/>
+        <circle id="ringDown" cx="29" cy="29" r="24" fill="none" stroke="var(--down)" stroke-width="5"
+          stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="150.8"
+          transform="rotate(-90 29 29)"/>
+        <circle id="ringUp" cx="29" cy="29" r="18" fill="none" stroke="var(--up)" stroke-width="4"
+          stroke-linecap="round" stroke-dasharray="113.1" stroke-dashoffset="113.1"
+          transform="rotate(-90 29 29)"/>
+      </svg>
+      <div class="ring-text">
+        <div class="label">Aggregate throughput</div>
+        <div class="value" id="aggTotal">0<span class="unit">Mbps</span></div>
+      </div>
+    </div>
+    <div class="cell down">
+      <div class="label">Total download</div>
+      <div class="value" id="sumDown">0<span class="unit">Mbps</span></div>
+      <div class="sub" id="sumDownData">0 GB session</div>
+    </div>
+    <div class="cell up">
+      <div class="label">Total upload</div>
+      <div class="value" id="sumUp">0<span class="unit">Mbps</span></div>
+      <div class="sub" id="sumUpData">0 GB session</div>
+    </div>
+    <div class="cell">
+      <div class="label">Active adapters</div>
+      <div class="value" id="activeCount">0<span class="unit">/ 0</span></div>
+      <div class="sub" id="pingSub">— ms avg latency</div>
+    </div>
+    <div class="cell">
+      <div class="label">Session uptime</div>
+      <div class="value" id="uptime">00:00:00</div>
+      <div class="sub" id="packetsSub">0 packets/s</div>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    <span>host <b>DESKTOP-7F21K</b></span>
+    <span>public ip <b id="pubIp">—</b></span>
+    <span>refresh <b>1000ms</b></span>
+    <span>simulated telemetry — for display purposes</span>
+  </footer>
+
+<script>
+const ADAPTERS = [
+  { id:'wifi', name:'Wi-Fi', type:'802.11ax · 5GHz', icon:'\u25CE', ip:'192.168.1.142', mac:'3C:A6:2F:9B:11:04',
+    baseDown: 38, baseUp: 9, up:true, signal: 82, gateway:'192.168.1.1' },
+  { id:'eth', name:'Ethernet', type:'1000BASE-T · Full duplex', icon:'\u25A3', ip:'192.168.1.118', mac:'AC:DE:48:00:11:7B',
+    baseDown: 62, baseUp: 24, up:true, signal:null, gateway:'192.168.1.1' },
+  { id:'vpn', name:'WireGuard', type:'VPN tunnel · UDP 51820', icon:'\u25C8', ip:'10.66.0.4', mac:'—',
+    baseDown: 14, baseUp: 6, up:true, signal:null, gateway:'10.66.0.1' },
+  { id:'lo', name:'Loopback', type:'Virtual · lo0', icon:'\u25EF', ip:'127.0.0.1', mac:'00:00:00:00:00:00',
+    baseDown: 1.2, baseUp: 1.2, up:true, signal:null, gateway:'—' },
+];
+
+const HIST_LEN = 60;
+const state = {};
+ADAPTERS.forEach(a=>{
+  state[a.id] = {
+    down: a.baseDown, up: a.baseUp,
+    histDown: new Array(HIST_LEN).fill(a.baseDown*0.3),
+    histUp: new Array(HIST_LEN).fill(a.baseUp*0.3),
+    totalDownGB: Math.random()*4 + 0.5,
+    totalUpGB: Math.random()*1.5 + 0.2,
+    latency: a.id==='vpn' ? 34 : a.id==='wifi' ? 18 : a.id==='eth' ? 6 : 0.1,
+    signal: a.signal,
+    up: a.up,
+  };
+});
+
+function fmtRate(v){
+  if(v < 1) return { n:(v*1000).toFixed(0), u:'Kbps' };
+  return { n: v.toFixed(v<10?1:0), u:'Mbps' };
+}
+function fmtGB(v){ return v.toFixed(2) + ' GB'; }
+
+const grid = document.getElementById('grid');
+ADAPTERS.forEach(a=>{
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <div class="card-head">
+      <div class="adapter-name">
+        <div class="icon">${a.icon}</div>
+        <div class="txt">
+          <h3>${a.name}</h3>
+          <div class="type">${a.type}</div>
+        </div>
+      </div>
+      <div class="status-pill up" id="pill-${a.id}"><span class="sdot"></span>connected</div>
+    </div>
+    <div class="speeds">
+      <div class="speed-block down">
+        <div class="lbl"><span class="arrow">&#8595;</span> download</div>
+        <div class="num" id="down-${a.id}">0<span class="u">Mbps</span></div>
+      </div>
+      <div class="speed-block up">
+        <div class="lbl"><span class="arrow">&#8593;</span> upload</div>
+        <div class="num" id="up-${a.id}">0<span class="u">Mbps</span></div>
+      </div>
+    </div>
+    <div class="spark-wrap"><canvas id="spark-${a.id}"></canvas></div>
+    <div class="meta-row">
+      <div class="meta-item"><div class="k">IPv4</div><div class="v strong">${a.ip}</div></div>
+      <div class="meta-item"><div class="k">${a.id==='vpn'?'Endpoint':'MAC'}</div><div class="v">${a.mac}</div></div>
+      <div class="meta-item"><div class="k">${a.signal!==null?'Signal':'Latency'}</div><div class="v" id="meta3-${a.id}">—</div></div>
+    </div>
+  `;
+  grid.appendChild(card);
+});
+
+function setupCanvas(canvas){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx, w: rect.width, h: rect.height };
+}
+
+function drawSpark(id, histDown, histUp, maxVal){
+  const canvas = document.getElementById('spark-'+id);
+  const { ctx, w, h } = setupCanvas(canvas);
+  ctx.clearRect(0,0,w,h);
+
+  const pad = 4;
+  const drawLine = (hist, color, fillColor)=>{
+    const max = Math.max(maxVal, 1);
+    const stepX = w / (HIST_LEN - 1);
+    ctx.beginPath();
+    hist.forEach((v,i)=>{
+      const x = i*stepX;
+      const y = h - pad - (Math.min(v,max)/max) * (h - pad*2);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.6;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    ctx.lineTo(w, h);
+    ctx.lineTo(0, h);
+    ctx.closePath();
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+  };
+  drawLine(histUp, '#FFB454', 'rgba(255,180,84,0.08)');
+  drawLine(histDown, '#4FA8FF', 'rgba(79,168,255,0.12)');
+}
+
+let seconds = 0;
+function tick(){
+  seconds++;
+  let sumDown = 0, sumUp = 0, activeN = 0;
+  let latencySum = 0, latencyN = 0;
+
+  ADAPTERS.forEach(a=>{
+    const s = state[a.id];
+    const wobble = (base)=> Math.max(0.05, base + (Math.random()-0.5)*base*0.5 + (Math.random()<0.04 ? base*(1+Math.random()*2) : 0));
+    s.down = a.id==='lo' ? wobble(a.baseDown)*0.4 : wobble(a.baseDown);
+    s.up = a.id==='lo' ? wobble(a.baseUp)*0.4 : wobble(a.baseUp);
+
+    s.histDown.shift(); s.histDown.push(s.down);
+    s.histUp.shift(); s.histUp.push(s.up);
+
+    s.totalDownGB += s.down/8/1024;
+    s.totalUpGB += s.up/8/1024;
+
+    if(a.signal !== null){
+      s.signal = Math.min(100, Math.max(35, s.signal + (Math.random()-0.5)*4));
+    }
+    s.latency = Math.max(0.1, s.latency + (Math.random()-0.5)*(a.id==='lo'?0.02:1.2));
+
+    const dEl = document.getElementById('down-'+a.id);
+    const uEl = document.getElementById('up-'+a.id);
+    const fd = fmtRate(s.down), fu = fmtRate(s.up);
+    dEl.innerHTML = `${fd.n}<span class="u">${fd.u}</span>`;
+    uEl.innerHTML = `${fu.n}<span class="u">${fu.u}</span>`;
+
+    const meta3 = document.getElementById('meta3-'+a.id);
+    if(a.signal !== null){
+      meta3.textContent = Math.round(s.signal) + '%';
+    } else if(a.id === 'lo'){
+      meta3.textContent = '< 0.1 ms';
+    } else {
+      meta3.textContent = s.latency.toFixed(1) + ' ms';
+    }
+
+    drawSpark(a.id, s.histDown, s.histUp, Math.max(a.baseDown, a.baseUp)*2.4);
+
+    sumDown += s.down;
+    sumUp += s.up;
+    activeN++;
+    if(a.id !== 'lo'){ latencySum += s.latency; latencyN++; }
+  });
+
+  document.getElementById('sumDown').innerHTML = `${sumDown.toFixed(1)}<span class="unit">Mbps</span>`;
+  document.getElementById('sumUp').innerHTML = `${sumUp.toFixed(1)}<span class="unit">Mbps</span>`;
+  document.getElementById('aggTotal').innerHTML = `${(sumDown+sumUp).toFixed(1)}<span class="unit">Mbps</span>`;
+  document.getElementById('activeCount').innerHTML = `${activeN}<span class="unit">/ ${ADAPTERS.length}</span>`;
+  document.getElementById('pingSub').textContent = (latencySum/latencyN).toFixed(1) + ' ms avg latency';
+
+  const totalDownGB = Object.values(state).reduce((s,v)=>s+v.totalDownGB,0);
+  const totalUpGB = Object.values(state).reduce((s,v)=>s+v.totalUpGB,0);
+  document.getElementById('sumDownData').textContent = fmtGB(totalDownGB) + ' session';
+  document.getElementById('sumUpData').textContent = fmtGB(totalUpGB) + ' session';
+
+  const pps = Math.round((sumDown+sumUp) * 82);
+  document.getElementById('packetsSub').textContent = pps.toLocaleString() + ' packets/s';
+
+  const maxScale = 220;
+  const downOff = 150.8 - Math.min(1, sumDown/maxScale)*150.8;
+  const upOff = 113.1 - Math.min(1, sumUp/maxScale)*113.1;
+  document.getElementById('ringDown').style.strokeDashoffset = downOff;
+  document.getElementById('ringUp').style.strokeDashoffset = upOff;
+
+  const h = Math.floor(seconds/3600).toString().padStart(2,'0');
+  const m = Math.floor((seconds%3600)/60).toString().padStart(2,'0');
+  const sec = (seconds%60).toString().padStart(2,'0');
+  document.getElementById('uptime').textContent = `${h}:${m}:${sec}`;
+}
+
+function updateClock(){
+  const now = new Date();
+  document.getElementById('time').textContent = now.toLocaleTimeString('en-US', {hour12:false});
+  document.getElementById('date').textContent = now.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+}
+
+document.getElementById('pubIp').textContent = '203.0.113.' + (14 + (seconds%5));
+
+updateClock();
+tick();
+setInterval(()=>{ updateClock(); tick(); }, 1000);
+window.addEventListener('resize', ()=>{
+  ADAPTERS.forEach(a=>{
+    const s = state[a.id];
+    drawSpark(a.id, s.histDown, s.histUp, Math.max(a.baseDown, a.baseUp)*2.4);
+  });
+});
+</script>
+</body>
+</html>
